@@ -162,6 +162,8 @@ public:
 		GameTime("GameTime"),
 		RHITime("RHITime"),
 		GPUTime("GPUTime"),
+		UsedMemory("Memory"),
+		PeakUsedMemory("PreAllocMemory"),
 		ReadLineCount(0),
 		LineCount(0),
 		LastTime(0),
@@ -185,6 +187,8 @@ public:
 	FRecordTime GameTime;
 	FRecordTime RHITime;
 	FRecordTime GPUTime;
+	FRecordTime UsedMemory;
+	FRecordTime PeakUsedMemory;
 
 	double LastTime;
 	double BeginTime = 0;
@@ -214,6 +218,10 @@ public:
 		GameTime.PushMilliSecond(newLine, FPlatformTime::ToMilliseconds(GGameThreadTime));
 		RHITime.PushMilliSecond(newLine, FPlatformTime::ToMilliseconds(GRHIThreadTime));
 		GPUTime.PushMilliSecond(newLine, FPlatformTime::ToMilliseconds(RHIGetGPUFrameCycles()));
+		
+		FPlatformMemoryStats MemoryStats = FPlatformMemory::GetStats();
+		UsedMemory.PushMilliSecond(newLine, MemoryStats.UsedPhysical / 1000 / 1000);
+		PeakUsedMemory.PushMilliSecond(newLine, MemoryStats.PeakUsedPhysical / 1000 / 1000);
 
 		auto MaxTime = FMath::Max(RHIGetGPUFrameCycles(), FMath::Max(GRenderThreadTime, GGameThreadTime));
 		
@@ -254,6 +262,8 @@ public:
 		DumpTime.Add(&GameTime);
 		DumpTime.Add(&RHITime);
 		DumpTime.Add(&GPUTime);
+		DumpTime.Add(&UsedMemory);
+		DumpTime.Add(&PeakUsedMemory);
 
 		int OldRead = ReadLineCount;
 		ReadLineCount = LineCount;
