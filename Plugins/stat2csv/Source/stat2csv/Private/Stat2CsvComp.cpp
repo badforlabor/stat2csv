@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 #pragma optimize( "", off )
 
 #include "Stat2CsvComp.h"
@@ -7,11 +7,11 @@
 #include "RenderCore.h"
 #include "Misc/App.h"
 #include "RendererInterface.h"
-#include "FileManager.h"
+#include "HAL/FileManager.h"
 #include "HAL/Runnable.h"
 #include "HAL/RunnableThread.h"
-
-FRunnable* NewRecordMgr2();
+#include "Misc/DateTime.h"
+#include "stat2csv.h"
 
 // Sets default values for this component's properties
 UStat2CsvComp::UStat2CsvComp()
@@ -23,7 +23,6 @@ UStat2CsvComp::UStat2CsvComp()
 	// ...
 }
 
-extern FRunnable* NewRecordMgr2();
 // Called when the game starts
 void UStat2CsvComp::BeginPlay()
 {
@@ -37,7 +36,7 @@ void UStat2CsvComp::BeginPlay()
 		delete Saver;
 		Saver = NULL;
 	}
-	Saver = NewRecordMgr2();
+	Saver = Fstat2csvTools::NewRecordMgr2();
 }
 
 
@@ -96,7 +95,7 @@ public:
 		: LastTime(0), Name(InName)
 	{}
 
-	// µ¥Î»ÊÇºÁÃë
+	// å•ä½æ˜¯æ¯«ç§’
 	void PushMilliSecond(bool newLine, float v)
 	{
 		auto now = 1.0 * FDateTime::UtcNow().GetTicks() / (ETimespan::TicksPerSecond);
@@ -164,12 +163,17 @@ public:
 		GPUTime("GPUTime"),
 		UsedMemory("Memory"),
 		PeakUsedMemory("PreAllocMemory"),
-		ReadLineCount(0),
-		LineCount(0),
 		LastTime(0),
 		BeginTime(0),
+		LineCount(0),
+		ReadLineCount(0),
 		Thread(NULL)
 	{
+		auto Now = FDateTime::Now();
+		FileName = FString::Printf(TEXT("%s/%.2d%.2d-%.2d%.2d%.2d-%s"), *FPaths::ProjectSavedDir(),
+			Now.GetMonth(), Now.GetDayOfYear(), Now.GetHour(), Now.GetMinute(), Now.GetSecond(),
+			TEXT("fps.csv"));
+
 		BeginTime = 1.0 * FDateTime::UtcNow().GetTicks() / (ETimespan::TicksPerSecond);
 		StopTaskCounter.Reset();
 		bStopped = false;
@@ -197,6 +201,7 @@ public:
 	FThreadSafeCounter StopTaskCounter;
 	bool bStopped;
 	FRunnableThread* Thread = NULL;
+	FString FileName;
 
 	void Tick()
 	{
@@ -206,7 +211,7 @@ public:
 		}
 		auto now = 1.0 * FDateTime::UtcNow().GetTicks() / (ETimespan::TicksPerSecond);
 		auto newLine = false;
-		if (now - LastTime > 1)
+		//if (now - LastTime > 1)
 		{
 			newLine = true;
 			LineCount++;
@@ -246,6 +251,7 @@ public:
 	virtual void Exit() override
 	{
 		Stop();
+		FPlatformProcess::Sleep(0.1f);
 	}
 
 	void Dump()
@@ -272,7 +278,7 @@ public:
 		FString LineEnd("\r\n");
 		if (OldRead == 0)
 		{
-			ar = IFileManager::Get().CreateFileWriter(*FString::Printf(TEXT("%s/%s"), *FPaths::ProjectSavedDir(), TEXT("fps.csv")));
+			ar = IFileManager::Get().CreateFileWriter(*FileName);
 
 			FString OneLine = "time";
 			for (int i = 0; i < DumpTime.Num(); i++)
@@ -292,7 +298,12 @@ public:
 		}
 		else
 		{
-			ar = IFileManager::Get().CreateFileWriter(*FString::Printf(TEXT("%s/%s"), *FPaths::ProjectSavedDir(), TEXT("fps.csv")), FILEWRITE_Append);
+			ar = IFileManager::Get().CreateFileWriter(*FileName, FILEWRITE_Append);
+		}
+
+		if (ar == nullptr)
+		{
+			return;
 		}
 
 		for (int line = OldRead; line < ReadLineCount; line++)
@@ -321,9 +332,10 @@ public:
 	}
 };
 
-FRunnable* NewRecordMgr2()
+FRunnable* Fstat2csvTools::NewRecordMgr2()
 {
-	return new FRecordMgr();
+	return nullptr;
+	//return new FRecordMgr();
 }
 
 #pragma optimize( "", on )

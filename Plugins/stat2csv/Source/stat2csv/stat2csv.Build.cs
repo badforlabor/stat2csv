@@ -1,12 +1,17 @@
-// Copyright 1998-2018 Epic Games, Inc. All Rights Reserved.
+﻿// Copyright 1998-2018 Epic Games, Inc. All Rights Reserved.
 
 using UnrealBuildTool;
 
 public class stat2csv : ModuleRules
 {
 	public stat2csv(ReadOnlyTargetRules Target) : base(Target)
-	{
-		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
+    {
+        if (Target.Configuration != UnrealTargetConfiguration.Shipping)
+        {
+            OptimizeCode = CodeOptimization.Never;
+        }
+
+        PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 		
 		PublicIncludePaths.AddRange(
 			new string[] {
@@ -51,5 +56,14 @@ public class stat2csv : ModuleRules
 				// ... add any modules that your module loads dynamically here ...
 			}
 			);
-	}
+        if (Target.Type == TargetRules.TargetType.Editor)
+        {
+            PrivateDependencyModuleNames.AddRange(
+                new string[]
+                {
+                "UnrealEd",
+                }
+                );
+        }
+    }
 }
